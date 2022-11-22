@@ -74,38 +74,56 @@ class Mephistogram:
         # set names
         self.axis_names = axis_names
 
-    def match(self, mephisto, matmul=False, verbose=False):
+    def match_matmul(self, mephisto, verbose=False, raise_err=True):
         """TODO"""
-        if matmul:
-            # only for ndim==2
-            if self.ndim != 2:
-                raise NotImplementedError("Ö")
+        # only for ndim==2
+        if self.ndim != 2:
+            raise NotImplementedError(
+                f"Dimensions are {self.ndim} and {mephisto.ndim}, but should both be 2."
+            )
 
-            if (
-                self.shape[1] == mephisto.shape[0]
-                and (self.bins[1] == mephisto.bins[0]).all()
-            ):
-                if verbose:
-                    print("Matrix multiplication possible.")
-                return True
-            else:
-                if verbose:
-                    print("Matrix multiplication not possible.")
-                return False
-
+        if (
+            self.shape[1] == mephisto.shape[0]
+            and (self.bins[1] == mephisto.bins[0]).all()
+        ):
+            if verbose:
+                print("Matrix multiplication possible.")
+            return True
         else:
-            if self.ndim == 1:
-                same_bins = (self.bins == mephisto.bins).all()
-            else:
-                same_bins = self.bins == mephisto.bins
-            if self.shape == mephisto.shape and same_bins:
-                if verbose:
-                    print("Elementary arithmetic possible.")
-                return True
-            else:
-                if verbose:
-                    print("Elementary arithmetic not possible.")
-                return False
+            base_str = "Matrix multiplication not possible."
+            if raise_err:
+                ValueError(
+                    base_str
+                    + f" Shapes are {self.shape} and {mephisto.shape};"
+                    + f" bins are {self.bins} and {mephisto.bins}"
+                )
+            elif verbose:
+                print(base_str)
+            return False
+
+    def match(self, mephisto, verbose=False, raise_err=True):
+        """TODO"""
+        ## WIP ## -- check the matching algorithm
+
+        if self.ndim == 1:
+            same_bins = (self.bins == mephisto.bins).all()
+        else:
+            same_bins = self.bins == mephisto.bins
+        if self.shape == mephisto.shape and same_bins:
+            if verbose:
+                print("Elementary arithmetic possible.")
+            return True
+        else:
+            base_str = "Elementary arithmetic not possible."
+            if raise_err:
+                ValueError(
+                    base_str
+                    + f" Shapes are {self.shape} and {mephisto.shape};"
+                    + f" bins are {self.bins} and {mephisto.bins}"
+                )
+            elif verbose:
+                print(base_str)
+            return False
 
     def T(self):
         """Create transposed mephistogram"""
@@ -120,18 +138,25 @@ class Mephistogram:
         """Add two mephistograms"""
         if self.match(mephisto):
             return Mephistogram(self.histo + mephisto.histo, self.bins, self.axis_names)
+
+    def __sub__(self, mephisto):
+        """Subtract two mephistograms. Note that the result might have negative numbers."""
+        if self.match(mephisto):
+            return Mephistogram(self.histo - mephisto.histo, self.bins, self.axis_names)
         else:
-            print("Addition not possible.")
+
             return None
 
     def __matmul__(self, mephisto):
         """Matrix-multiply two mephistograms"""
-        if self.match(mephisto, matmul=True):
+        if self.match_matmul(mephisto):
             new_bins = (self.bins[0], mephisto.bins[1])
             new_names = (self.axis_names[0], mephisto.axis_names[1])
             return Mephistogram(self.histo @ mephisto.histo, new_bins, new_names)
         else:
-            print("Matmul not possible.")
+            ValueError(
+                f"Matmul not possible. Dimensions are {self.ndim} and {mephisto.ndim}."
+            )
             return None
 
     def plot(self, **kwargs):
