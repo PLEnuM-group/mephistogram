@@ -41,7 +41,7 @@ class Mephistogram:
 
     """
 
-    def __init__(self, histo, bins, axis_names=None):
+    def __init__(self, histo_or_nums, bins, axis_names=None, make_hist=False):
         """Initialize the mephistogram with its bin content and bin edges.
 
         Histogram and bin dimensionality is checked and stored,
@@ -49,8 +49,9 @@ class Mephistogram:
 
         Parameters:
         -----------
-        histo: ndarray
-            numpy array of histogram bin contents.
+        histo_or_nums: ndarray
+            numpy array of histogram bin contents (make_hist=False)
+            OR numpy array of raw numbers from which to calculate the histogram (make_hist=True)
             1D: length n = np.shape(histo)[0]
             2D: shape n x m = np.shape(histo)
         bins: 1D array or tuple of 1D arrays
@@ -63,12 +64,37 @@ class Mephistogram:
         axis_names: str or tuple of str
             Names of the histogram axis/axes.
             Defaults are 'axis-i' for i in number of axes, i.e. 'axis-0' for 1D histogram.
+        make_hist: bool, default False
+            Calculate histogram (True) OR directly expect histogram as input (False)
+
         """
-        self.histo = histo
+        if make_hist:
+            histo_out = self.make_hist(histo_or_nums, bins)
+            self.histo = histo_out[0]
+        else:
+            self.histo = histo_or_nums
         self.ndim = np.ndim(self.histo)
         self.shape = np.shape(self.histo)
         self.set_bins(bins)
         self.set_names(axis_names)
+
+    def make_hist(self, nums, bins):
+        """
+        Wrapper for np.histogram or np.histogram2d
+
+        Returns:
+        1D case: hist, edges
+        2D case: hist, xedges, yedges
+        """
+        # check input
+        if isinstance(bins, tuple):
+            assert len(bins) == 2, "bins must be 1D or 2D-tuple"
+            assert len(nums) == 2, "num input must be 1D or 2D-tuple"
+            return np.histogram2d(*nums, bins=bins)
+        else:
+            assert bins.ndim == 1, "bins must be 1D or 2D-tuple"
+            assert nums.ndim == 1, "num input must be 1D or 2D-tuple"
+            return np.histogram(nums, bins=bins)
 
     def __repr__(self) -> str:
         rep_str = f"Mephistogram with {self.ndim} dimensions and shape {self.shape}."
@@ -253,7 +279,7 @@ class Mephistogram:
         2D: plt.pcolormesh
 
         """
-        plt.figure()
+        f, axes = plt.subplots(figsize=(5, 4))
         if self.ndim == 2:
             plt.pcolormesh(*self.bins, self.histo.T, **kwargs)
             plt.xlabel(self.axis_names[0])
@@ -268,3 +294,4 @@ class Mephistogram:
             plt.xlabel(self.axis_names)
         else:
             print(f"No plotting possible with {self.ndim} dimensions.")
+        return f, axes
