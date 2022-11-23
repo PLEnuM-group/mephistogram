@@ -9,12 +9,61 @@ def get_mids(bins):
 
 class Mephistogram:
     """My elegantly programmed histogram class.
+    Currently tested for 1D and 2D histograms.
 
-    Currently working for 1D and 2D histograms.
+
+    Attributes:
+    -----------
+    histo:
+
+    bins:
+
+    bin_mids:
+
+    axis_names:
+
+    ndim:
+
+    shape:
+
+
+    Methods:
+    --------
+
+    match:
+
+    match_matmul:
+
+    T:
+
+    plot:
+
+
     """
 
     def __init__(self, histo, bins, axis_names=None):
-        """TODO"""
+        """Initialize the mephistogram with its bin content and bin edges.
+
+        Histogram and bin dimensionality is checked and stored,
+        and axis names are assigned or generated.
+
+        Parameters:
+        -----------
+        histo: ndarray
+            numpy array of histogram bin contents.
+            1D: length n = np.shape(histo)[0]
+            2D: shape n x m = np.shape(histo)
+        bins: 1D array or tuple of 1D arrays
+            bin edges matching the dimensionality of histo:
+            1D array with length n+1
+            2D tuple of arrays with lengths (n+1, m+1)
+
+        Optional Parameters:
+        --------------------
+        axis_names: str or tuple of str
+            Names of the histogram axis/axes.
+            Defaults are 'axis-i' for i in number of axes, i.e. 'axis-0' for 1D histogram.
+        """
         self.histo = histo
         self.ndim = np.ndim(self.histo)
         self.shape = np.shape(self.histo)
@@ -27,8 +76,16 @@ class Mephistogram:
         return rep_str
 
     def set_bins(self, bins):
-        """TODO"""
-        if self.ndim > 1:
+        """Check that the bin dimensionality matches the histogram and assign to attribute."""
+        if self.ndim == 1:  # 1D
+            # check the correct bin length
+            assert (
+                len(bins) == self.shape[0] + 1
+            ), "The bin length should match the corresponding histogram axis length."
+
+            self.bin_mids = get_mids(bins)  # calc the bin mids
+
+        else:  # 2D or larger
             # check that we got the correct number of bin edges
             assert self.ndim == len(
                 bins
@@ -43,18 +100,11 @@ class Mephistogram:
 
                 bin_mids.append(get_mids(b))  # calc the bin mids
             self.bin_mids = tuple(bin_mids)
-        else:
-            # check the correct bin length
-            assert (
-                len(bins) == self.shape[0] + 1
-            ), "The bin length should match the corresponding histogram axis length."
-
-            self.bin_mids = get_mids(bins)  # calc the bin mids
         # set bins
         self.bins = bins
 
     def set_names(self, axis_names):
-        """TODO"""
+        """Assign axis names, generate them if axis_names is None."""
         # generate default axis names
         if axis_names is None:
             axis_names = (
@@ -62,7 +112,6 @@ class Mephistogram:
                 if self.ndim == 1
                 else tuple([f"axis-{i}" for i in range(self.ndim)])
             )
-
         # check for the correct number of axis names
         if self.ndim == 1:
             assert type(axis_names) is str
@@ -74,59 +123,101 @@ class Mephistogram:
         # set names
         self.axis_names = axis_names
 
-    def match_matmul(self, mephisto, verbose=False, raise_err=True):
-        """TODO"""
-        # only for ndim==2
+    def match_matmul(self, mephisto, verbose=False, raise_err=True) -> bool:
+        """Check if two mephistograms are compatible for matrix multiplication.
+
+        Parameters:
+        -----------
+        mephisto: Mephistogram
+            Check if self.histo and Mephistogram.histo are matmul compatible
+        verbose: bool, default False
+            Do or do not print output
+        raise_err: bool, default True
+            Raise ValueError if mephistograms are not compatible
+
+        Returns:
+        --------
+        Bool: compatible or not
+
+        """
+        # only for ndim=2
         if self.ndim != 2:
             raise NotImplementedError(
                 f"Dimensions are {self.ndim} and {mephisto.ndim}, but should both be 2."
             )
+        # last axis of self and first axis of mephisto need to match
+        # and the corresponding bins need to be identical
+        str_good = "Matrix multiplication possible."
+        str_bad = "Matrix multiplication not possible."
 
-        if (
-            self.shape[1] == mephisto.shape[0]
-            and (self.bins[1] == mephisto.bins[0]).all()
-        ):
-            if verbose:
-                print("Matrix multiplication possible.")
-            return True
-        else:
-            base_str = "Matrix multiplication not possible."
+        # check matching dimensions for matmul
+        if self.shape[-1] != mephisto.shape[0]:
             if raise_err:
-                ValueError(
-                    base_str
-                    + f" Shapes are {self.shape} and {mephisto.shape};"
-                    + f" bins are {self.bins} and {mephisto.bins}"
+                raise ValueError(
+                    str_bad + f" Shapes are {self.shape} and {mephisto.shape};"
                 )
             elif verbose:
-                print(base_str)
+                print(str_bad + f" Shapes are {self.shape} and {mephisto.shape};")
+            return False
+        # check matching bins for matmul
+        if (self.bins[-1] == mephisto.bins[0]).all():
+            if verbose:
+                print(str_good)
+            return True
+        else:
+            if raise_err:
+                raise ValueError(str_bad + f" bins are {self.bins} and {mephisto.bins}")
+            elif verbose:
+                print(str_bad + f" bins are {self.bins} and {mephisto.bins}")
             return False
 
-    def match(self, mephisto, verbose=False, raise_err=True):
-        """TODO"""
-        ## WIP ## -- check the matching algorithm
+    def match(self, mephisto, verbose=False, raise_err=True) -> bool:
+        """Check if two mephistograms are compatible for elementary arithmetics (+, -, *, /).
 
+        Parameters:
+        -----------
+        mephisto: Mephistogram
+            Check if self.histo and Mephistogram.histo have identical dimensions and binnings.
+        verbose: bool, default False
+            Do or do not print output
+        raise_err: bool, default True
+            Raise ValueError if mephistograms are not compatible
+
+        Returns:
+        --------
+        Bool: compatible or not
+
+        """
+        str_good = "Elementary arithmetic possible."
+        str_bad = "Elementary arithmetic not possible."
+        # check if shape is matching
+        if not self.shape == mephisto.shape:
+            if raise_err:
+                raise ValueError(
+                    str_bad + f" Shapes are {self.shape} and {mephisto.shape};"
+                )
+            elif verbose:
+                print(str_bad + f" Shapes are {self.shape} and {mephisto.shape};")
+            return False
+
+        # check if bins are matching
         if self.ndim == 1:
             same_bins = (self.bins == mephisto.bins).all()
         else:
             same_bins = self.bins == mephisto.bins
-        if self.shape == mephisto.shape and same_bins:
+        if same_bins:
             if verbose:
-                print("Elementary arithmetic possible.")
+                print(str_good)
             return True
         else:
-            base_str = "Elementary arithmetic not possible."
             if raise_err:
-                ValueError(
-                    base_str
-                    + f" Shapes are {self.shape} and {mephisto.shape};"
-                    + f" bins are {self.bins} and {mephisto.bins}"
-                )
+                raise ValueError(str_bad + f" bins are {self.bins} and {mephisto.bins}")
             elif verbose:
-                print(base_str)
+                print(str_bad + f" bins are {self.bins} and {mephisto.bins}")
             return False
 
     def T(self):
-        """Create transposed mephistogram"""
+        """Create and return transposed mephistogram."""
         if self.ndim == 1:
             return self
         elif self.ndim == 2:
@@ -135,7 +226,7 @@ class Mephistogram:
             raise NotImplementedError("Ö")
 
     def __add__(self, mephisto):
-        """Add two mephistograms"""
+        """Add two mephistograms."""
         if self.match(mephisto):
             return Mephistogram(self.histo + mephisto.histo, self.bins, self.axis_names)
 
@@ -143,24 +234,25 @@ class Mephistogram:
         """Subtract two mephistograms. Note that the result might have negative numbers."""
         if self.match(mephisto):
             return Mephistogram(self.histo - mephisto.histo, self.bins, self.axis_names)
-        else:
-
-            return None
 
     def __matmul__(self, mephisto):
-        """Matrix-multiply two mephistograms"""
+        """Matrix-multiply two mephistograms. -> @ operator
+
+        The resulting binning and axis names will
+        correspond to what's expected from matmul."""
         if self.match_matmul(mephisto):
             new_bins = (self.bins[0], mephisto.bins[1])
             new_names = (self.axis_names[0], mephisto.axis_names[1])
             return Mephistogram(self.histo @ mephisto.histo, new_bins, new_names)
-        else:
-            ValueError(
-                f"Matmul not possible. Dimensions are {self.ndim} and {mephisto.ndim}."
-            )
-            return None
 
     def plot(self, **kwargs):
-        """TODO"""
+        """Plot 1D or 2D mephistogram.
+
+        **kwargs are piped through to:
+        1D: plt.bar
+        2D: plt.pcolormesh
+
+        """
         plt.figure()
         if self.ndim == 2:
             plt.pcolormesh(*self.bins, self.histo.T, **kwargs)
