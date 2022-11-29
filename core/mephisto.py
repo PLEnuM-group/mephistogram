@@ -7,6 +7,11 @@ def get_mids(bins):
     return (bins[1:] + bins[:-1]) / 2
 
 
+def rebin(histo, bins):
+    """TODO: update histogram to different binning via RegularGridInterpolator"""
+    pass
+
+
 class Mephistogram:
     """My elegantly programmed histogram class.
     Currently tested for 1D and 2D histograms.
@@ -78,6 +83,14 @@ class Mephistogram:
         self.set_bins(bins)
         self.set_names(axis_names)
 
+    def unity(self):
+        """Neutral element of matmul"""
+        pass
+
+    def zeros(self):
+        """Neutral element of addition"""
+        pass
+
     def make_hist(self, nums, bins):
         """
         Wrapper for np.histogram or np.histogram2d
@@ -120,9 +133,10 @@ class Mephistogram:
             bin_mids = []
             for idx, b in enumerate(bins):
                 # check the correct bin length
-                assert (
-                    len(b) == self.shape[idx] + 1
-                ), "The bin length should match the corresponding histogram axis length."
+                assert len(b) == self.shape[idx] + 1, (
+                    f"The bin length ({len(b)-1}) should match "
+                    + f"the corresponding histogram axis length ({self.shape[idx]})."
+                )
 
                 bin_mids.append(get_mids(b))  # calc the bin mids
             self.bin_mids = tuple(bin_mids)
@@ -148,6 +162,14 @@ class Mephistogram:
 
         # set names
         self.axis_names = axis_names
+
+    def normalize(self, axis=0):
+        if axis == 0:
+            self.histo /= np.sum(self.histo, axis=axis)
+        elif axis == 1:
+            self.histo /= np.sum(self.histo, axis=axis)[:, np.newaxis]
+        else:
+            raise ValueError("Too many axis dimensions")
 
     def match_matmul(self, mephisto, verbose=False, raise_err=True) -> bool:
         """Check if two mephistograms are compatible for matrix multiplication.
@@ -261,11 +283,25 @@ class Mephistogram:
         if self.match(mephisto):
             return Mephistogram(self.histo - mephisto.histo, self.bins, self.axis_names)
 
+    def __mul__(self, mephisto):
+        """Multiply two mephistograms."""
+        if self.match(mephisto):
+            return Mephistogram(self.histo * mephisto.histo, self.bins, self.axis_names)
+
+    def __truediv__(self, mephisto):
+        """Divide two mephistograms."""
+        if self.match(mephisto):
+            return Mephistogram(self.histo / mephisto.histo, self.bins, self.axis_names)
+
     def __matmul__(self, mephisto):
         """Matrix-multiply two mephistograms. -> @ operator
 
         The resulting binning and axis names will
-        correspond to what's expected from matmul."""
+        correspond to what's expected from matmul:
+        First axis: first axis of first bins
+        Second axis: second axis of second bins
+
+        """
         if self.match_matmul(mephisto):
             new_bins = (self.bins[0], mephisto.bins[1])
             new_names = (self.axis_names[0], mephisto.axis_names[1])
@@ -284,6 +320,8 @@ class Mephistogram:
             plt.pcolormesh(*self.bins, self.histo.T, **kwargs)
             plt.xlabel(self.axis_names[0])
             plt.ylabel(self.axis_names[1])
+            plt.xlim(self.bins[0][0], self.bins[0][-1])
+            plt.ylim(self.bins[1][0], self.bins[1][-1])
         elif self.ndim == 1:
             plt.bar(
                 get_mids(self.bins),
@@ -292,6 +330,7 @@ class Mephistogram:
                 **kwargs,
             )
             plt.xlabel(self.axis_names)
+            plt.xlim(self.bins[0], self.bins[-1])
         else:
             print(f"No plotting possible with {self.ndim} dimensions.")
         return f, axes
