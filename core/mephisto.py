@@ -252,7 +252,11 @@ class Mephistogram:
         if self.ndim == 1:
             same_bins = (self.bins == mephisto.bins).all()
         else:
-            same_bins = self.bins == mephisto.bins
+            same_bins = True
+            for b, mb in zip(self.bins, mephisto.bins):
+                same_bins &= (b == mb).all()
+                if not same_bins:
+                    break
         if same_bins:
             if verbose:
                 print(str_good)
