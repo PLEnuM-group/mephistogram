@@ -12,6 +12,17 @@ def rebin(histo, bins):
     pass
 
 
+def like(mephisto, fill_value=0):
+    """Make new Mephistogram with generic fill value,
+    but otherwise same properties"""
+    return Mephistogram(
+        np.full_like(mephisto.histo, fill_value=fill_value),
+        bins=mephisto.bins,
+        axis_names=mephisto.axis_names,
+        make_hist=False,
+    )
+
+
 class Mephistogram:
     """My elegantly programmed histogram class.
     Currently tested for 1D and 2D histograms.
@@ -83,13 +94,11 @@ class Mephistogram:
         self.set_bins(bins)
         self.set_names(axis_names)
 
-    def unity(self):
-        """Neutral element of matmul"""
-        pass
+    def __len__(self):
+        return len(self.histo)
 
-    def zeros(self):
-        """Neutral element of addition"""
-        pass
+    def __getitem__(self, idx):
+        return self.histo[idx]
 
     def make_hist(self, nums, bins):
         """
@@ -111,7 +120,8 @@ class Mephistogram:
 
     def __repr__(self) -> str:
         rep_str = f"Mephistogram with {self.ndim} dimensions and shape {self.shape}."
-        rep_str += f"\nAxis names are {self.axis_names}."
+        rep_str += f" Axis names are {self.axis_names}."
+        rep_str += "\n" + str(self.histo)
         return rep_str
 
     def set_bins(self, bins):
@@ -170,6 +180,9 @@ class Mephistogram:
             self.histo /= np.sum(self.histo, axis=axis)[:, np.newaxis]
         else:
             raise ValueError("Too many axis dimensions")
+
+    def sum(self, **kwargs):
+        return self.histo.sum(**kwargs)
 
     def match_matmul(self, mephisto, verbose=False, raise_err=True) -> bool:
         """Check if two mephistograms are compatible for matrix multiplication.
@@ -277,27 +290,82 @@ class Mephistogram:
         else:
             raise NotImplementedError("Ö")
 
-    def __add__(self, mephisto):
-        """Add two mephistograms."""
-        if self.match(mephisto):
-            return Mephistogram(self.histo + mephisto.histo, self.bins, self.axis_names)
+    #  Elementary arithmetics.
+    def __neg__(self):
+        return self * -1
 
-    def __sub__(self, mephisto):
-        """Subtract two mephistograms. Note that the result might have negative numbers."""
-        if self.match(mephisto):
-            return Mephistogram(self.histo - mephisto.histo, self.bins, self.axis_names)
+    def inv(self, in_place=False):
+        """Inverting every histo element of mephistogram. NOT a matrix inversion!"""
+        if in_place:
+            self.histo = 1 / self.histo
+        else:
+            return Mephistogram(1 / self.histo, self.bins, self.axis_names)
 
-    def __mul__(self, mephisto):
-        """Multiply two mephistograms."""
-        if self.match(mephisto):
-            return Mephistogram(self.histo * mephisto.histo, self.bins, self.axis_names)
+    def __add__(self, this):
+        """Add two mephistograms or a number/matching array."""
+        if (
+            isinstance(this, int)
+            or isinstance(this, float)
+            or isinstance(this, np.ndarray)
+        ):
+            return Mephistogram(self.histo + this, self.bins, self.axis_names)
+        elif isinstance(this, Mephistogram) and self.match(this):
+            return Mephistogram(self.histo + this.histo, self.bins, self.axis_names)
+        else:
+            raise TypeError(f"Operation not defined for this {type(this)}")
 
-    def __truediv__(self, mephisto):
-        """Divide two mephistograms."""
-        if self.match(mephisto):
-            return Mephistogram(self.histo / mephisto.histo, self.bins, self.axis_names)
+    def __radd__(self, this):
+        return self.__add__(this)
 
-    def __matmul__(self, mephisto):
+    def __sub__(self, this):
+        """Subtract two mephistograms or a number/matching array. Note that the result might have negative numbers."""
+        if (
+            isinstance(this, int)
+            or isinstance(this, float)
+            or isinstance(this, np.ndarray)
+        ):
+            return Mephistogram(self.histo - this, self.bins, self.axis_names)
+        elif isinstance(this, Mephistogram) and self.match(this):
+            return Mephistogram(self.histo - this.histo, self.bins, self.axis_names)
+        else:
+            raise TypeError(f"Operation not defined for this {type(this)}")
+
+    def __rsub__(self, this):
+        return -self + this
+
+    def __mul__(self, this):
+        """Multiply two mephistograms or a number/matching array."""
+        if (
+            isinstance(this, int)
+            or isinstance(this, float)
+            or isinstance(this, np.ndarray)
+        ):
+            return Mephistogram(self.histo * this, self.bins, self.axis_names)
+        elif isinstance(this, Mephistogram) and self.match(this):
+            return Mephistogram(self.histo * this.histo, self.bins, self.axis_names)
+        else:
+            raise TypeError(f"Operation not defined for this {type(this)}")
+
+    def __rmul__(self, this):
+        return self.__mul__(this)
+
+    def __truediv__(self, this):
+        """Divide two mephistograms or a number/matching array."""
+        if (
+            isinstance(this, int)
+            or isinstance(this, float)
+            or isinstance(this, np.ndarray)
+        ):
+            return Mephistogram(self.histo / this, self.bins, self.axis_names)
+        elif isinstance(this, Mephistogram) and self.match(this):
+            return Mephistogram(self.histo / this.histo, self.bins, self.axis_names)
+        else:
+            raise TypeError(f"Operation not defined for this {type(this)}")
+
+    def __rtruediv__(self, this):
+        return self.inv() * this
+
+    def __matmul__(self, this):
         """Matrix-multiply two mephistograms. -> @ operator
 
         The resulting binning and axis names will
@@ -306,10 +374,14 @@ class Mephistogram:
         Second axis: second axis of second bins
 
         """
-        if self.match_matmul(mephisto):
-            new_bins = (self.bins[0], mephisto.bins[1])
-            new_names = (self.axis_names[0], mephisto.axis_names[1])
-            return Mephistogram(self.histo @ mephisto.histo, new_bins, new_names)
+        # in contrast to the other operations,
+        # we want to be really sure that these are both mephistograms
+        if isinstance(this, Mephistogram) and self.match_matmul(this):
+            new_bins = (self.bins[0], this.bins[1])
+            new_names = (self.axis_names[0], this.axis_names[1])
+            return Mephistogram(self.histo @ this.histo, new_bins, new_names)
+        else:
+            raise TypeError(f"Operation not defined for this {type(this)}")
 
     def plot(self, **kwargs):
         """Plot 1D or 2D mephistogram.
