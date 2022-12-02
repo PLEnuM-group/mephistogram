@@ -290,7 +290,39 @@ class Mephistogram:
         else:
             raise NotImplementedError("Ö")
 
-    #  Elementary arithmetics.
+    # Logic
+    def __and__(self, this: object) -> bool:
+        return self.hist & this
+
+    def __rand__(self, this: object) -> bool:
+        return this & self.hist
+
+    def __or__(self, this: object) -> bool:
+        return self.hist | this
+
+    def __ror__(self, this: object) -> bool:
+        return this | self.hist
+
+    # Comparisons
+    def __eq__(self, __o: object) -> bool:
+        return self.histo == __o
+
+    def __ne__(self, __o: object) -> bool:
+        return self.histo != __o
+
+    def __ge__(self, __o: object) -> bool:
+        return self.histo >= __o
+
+    def __gt__(self, __o: object) -> bool:
+        return self.histo > __o
+
+    def __le__(self, __o: object) -> bool:
+        return self.histo <= __o
+
+    def __lt__(self, __o: object) -> bool:
+        return self.histo < __o
+
+    # Elementary arithmetics.
     def __neg__(self):
         return self * -1
 
