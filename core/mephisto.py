@@ -292,35 +292,55 @@ class Mephistogram:
 
     # Logic
     def __and__(self, this: object) -> bool:
+        if isinstance(this, Mephistogram):
+            self.match(this)
         return self.hist & this
 
     def __rand__(self, this: object) -> bool:
+        if isinstance(this, Mephistogram):
+            self.match(this)
         return this & self.hist
 
     def __or__(self, this: object) -> bool:
+        if isinstance(this, Mephistogram):
+            self.match(this)
         return self.hist | this
 
     def __ror__(self, this: object) -> bool:
+        if isinstance(this, Mephistogram):
+            self.match(this)
         return this | self.hist
 
     # Comparisons
-    def __eq__(self, __o: object) -> bool:
-        return self.histo == __o
+    def __eq__(self, this: object) -> bool:
+        if isinstance(this, Mephistogram):
+            self.match(this)
+        return self.histo == this
 
-    def __ne__(self, __o: object) -> bool:
-        return self.histo != __o
+    def __ne__(self, this: object) -> bool:
+        if isinstance(this, Mephistogram):
+            self.match(this)
+        return self.histo != this
 
-    def __ge__(self, __o: object) -> bool:
-        return self.histo >= __o
+    def __ge__(self, this: object) -> bool:
+        if isinstance(this, Mephistogram):
+            self.match(this)
+        return self.histo >= this
 
-    def __gt__(self, __o: object) -> bool:
-        return self.histo > __o
+    def __gt__(self, this: object) -> bool:
+        if isinstance(this, Mephistogram):
+            self.match(this)
+        return self.histo > this
 
-    def __le__(self, __o: object) -> bool:
-        return self.histo <= __o
+    def __le__(self, this: object) -> bool:
+        if isinstance(this, Mephistogram):
+            self.match(this)
+        return self.histo <= this
 
-    def __lt__(self, __o: object) -> bool:
-        return self.histo < __o
+    def __lt__(self, this: object) -> bool:
+        if isinstance(this, Mephistogram):
+            self.match(this)
+        return self.histo < this
 
     # Elementary arithmetics.
     def __neg__(self):
@@ -347,7 +367,7 @@ class Mephistogram:
             raise TypeError(f"Operation not defined for this {type(this)}")
 
     def __radd__(self, this):
-        return self.__add__(this)
+        return self + this
 
     def __sub__(self, this):
         """Subtract two mephistograms or a number/matching array. Note that the result might have negative numbers."""
