@@ -173,16 +173,57 @@ class Mephistogram:
         # set names
         self.axis_names = axis_names
 
-    def normalize(self, axis=0):
-        if axis == 0:
-            self.histo /= np.sum(self.histo, axis=axis)
-        elif axis == 1:
-            self.histo /= np.sum(self.histo, axis=axis)[:, np.newaxis]
+    def normalize(self, mode="1D", axis=0):
+        """Normalize histogram.
+        Parameters:
+        -----------
+        mode: '1D' or 'full'
+        axis: optional, only needed if mode='1D'; 0 or 1
+        """
+        if mode == "1D":
+            if axis == 0:
+                self.histo /= np.sum(self.histo, axis=axis)
+            elif axis == 1:
+                self.histo /= np.sum(self.histo, axis=axis)[:, np.newaxis]
+            else:
+                raise ValueError("Too many axis dimensions")
+        elif mode == "full":
+            self.histo /= np.sum(self.histo)
         else:
-            raise ValueError("Too many axis dimensions")
+            raise ValueError("Unknown mode:", mode, ". Should be 1D or full!")
 
-    def sum(self, **kwargs):
-        return self.histo.sum(**kwargs)
+    def sum(self, return_mephisto=False, **kwargs):
+        """Wrapper for numpy.sum;
+
+        Parameters:
+        -----------
+        return_mephisto: bool, default False
+            Option to return Mephistogram if original Mephistogram was >= 2D.
+
+        kwargs:
+        -------
+        All piped through to numpy.sum(**kwargs)
+
+        """
+        # return array/number
+        if self.ndim == 1 or not return_mephisto or not "axis" in kwargs.keys():
+            return self.histo.sum(**kwargs)
+        else:
+            axis = kwargs["axis"]
+            if self.ndim == 2:
+                remaining_axis = 1 if axis == 0 else 0
+                return Mephistogram(
+                    self.histo.sum(**kwargs),
+                    bins=self.bins[remaining_axis],
+                    axis_names=self.axis_names[remaining_axis],
+                )
+            else:
+                remaining_axes = [i for i in range(self.ndim) if i != axis]
+                return Mephistogram(
+                    self.histo.sum(**kwargs),
+                    bins=tuple(self.bins[r] for r in remaining_axes),
+                    axis_names=tuple(self.axis_names[r] for r in remaining_axes),
+                )
 
     def match_matmul(self, mephisto, verbose=False, raise_err=True) -> bool:
         """Check if two mephistograms are compatible for matrix multiplication.
@@ -436,29 +477,37 @@ class Mephistogram:
             raise TypeError(f"Operation not defined for this {type(this)}")
 
     def plot(self, **kwargs):
-        """Plot 1D or 2D mephistogram.
+        """Wrapper."""
+        plot_mephistogram(self, **kwargs)
 
-        **kwargs are piped through to:
-        1D: plt.bar
-        2D: plt.pcolormesh
+def plot_mephistogram(mephistogram, **kwargs):
+    """Plot 1D or 2D mephistogram.
 
-        """
+    **kwargs are piped through to:
+    1D: plt.bar
+    2D: plt.pcolormesh
+
+    """
+    if not "f" in kwargs or not "axes" in kwargs:
         f, axes = plt.subplots(figsize=(5, 4))
-        if self.ndim == 2:
-            plt.pcolormesh(*self.bins, self.histo.T, **kwargs)
-            plt.xlabel(self.axis_names[0])
-            plt.ylabel(self.axis_names[1])
-            plt.xlim(self.bins[0][0], self.bins[0][-1])
-            plt.ylim(self.bins[1][0], self.bins[1][-1])
-        elif self.ndim == 1:
-            plt.bar(
-                get_mids(self.bins),
-                height=self.histo,
-                width=np.diff(self.bins),
-                **kwargs,
-            )
-            plt.xlabel(self.axis_names)
-            plt.xlim(self.bins[0], self.bins[-1])
-        else:
-            print(f"No plotting possible with {self.ndim} dimensions.")
-        return f, axes
+    else:
+        f = kwargs.pop("f")
+        axes = kwargs.pop("axes")
+    if mephistogram.ndim == 2:
+        plt.pcolormesh(*mephistogram.bins, mephistogram.histo.T, **kwargs)
+        plt.xlabel(mephistogram.axis_names[0])
+        plt.ylabel(mephistogram.axis_names[1])
+        plt.xlim(mephistogram.bins[0][0], mephistogram.bins[0][-1])
+        plt.ylim(mephistogram.bins[1][0], mephistogram.bins[1][-1])
+    elif mephistogram.ndim == 1:
+        plt.bar(
+            mephistogram.bin_mids,
+            height=mephistogram.histo,
+            width=np.diff(mephistogram.bins),
+            **kwargs,
+        )
+        plt.xlabel(mephistogram.axis_names)
+        plt.xlim(mephistogram.bins[0], mephistogram.bins[-1])
+    else:
+        print(f"No plotting possible with {mephistogram.ndim} dimensions.")
+    return f, axes
