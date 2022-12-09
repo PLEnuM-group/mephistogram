@@ -480,8 +480,32 @@ class Mephistogram:
         """Wrapper."""
         plot_mephistogram(self, **kwargs)
 
+def plot_multiple_mephistograms(mephistograms, **kwargs):
+    """Plot multiple 1D mephistograms as barstacked."""
+    if not "f" in kwargs or not "axes" in kwargs:
+        f, axes = plt.subplots(figsize=(5, 4))
+    else:
+        f = kwargs.pop("f")
+        axes = kwargs.pop("axes")
+    labels = kwargs.pop("labels", [""]*len(mephistograms))
+    for ii, mephistogram in enumerate(mephistograms):
+        # check if mephistogram matches the previous one
+        if ii>0:
+            mephistogram.match(mephistograms[ii-1], raise_err=True)
+        plt.bar(
+            mephistogram.bin_mids,
+            height=mephistogram.histo,
+            width=np.diff(mephistogram.bins),
+            bottom=0 if ii==0 else mephistograms[ii-1].histo,
+            label=labels[ii],
+            **kwargs,
+        )
+    plt.xlabel(mephistogram.axis_names)
+    plt.xlim(mephistogram.bins[0], mephistogram.bins[-1])
+    return f, axes
+
 def plot_mephistogram(mephistogram, **kwargs):
-    """Plot 1D or 2D mephistogram.
+    """Plot 1D or 2D mephistograms.
 
     **kwargs are piped through to:
     1D: plt.bar
