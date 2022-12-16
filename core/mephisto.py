@@ -480,6 +480,7 @@ class Mephistogram:
         """Wrapper."""
         plot_mephistogram(self, **kwargs)
 
+
 def plot_multiple_mephistograms(mephistograms, **kwargs):
     """Plot multiple 1D mephistograms as barstacked."""
     if not "f" in kwargs or not "axes" in kwargs:
@@ -487,22 +488,23 @@ def plot_multiple_mephistograms(mephistograms, **kwargs):
     else:
         f = kwargs.pop("f")
         axes = kwargs.pop("axes")
-    labels = kwargs.pop("labels", [""]*len(mephistograms))
+    labels = kwargs.pop("labels", [""] * len(mephistograms))
     for ii, mephistogram in enumerate(mephistograms):
         # check if mephistogram matches the previous one
-        if ii>0:
-            mephistogram.match(mephistograms[ii-1], raise_err=True)
+        if ii > 0:
+            mephistogram.match(mephistograms[ii - 1], raise_err=True)
         plt.bar(
             mephistogram.bin_mids,
             height=mephistogram.histo,
             width=np.diff(mephistogram.bins),
-            bottom=0 if ii==0 else mephistograms[ii-1].histo,
+            bottom=0 if ii == 0 else mephistograms[ii - 1].histo,
             label=labels[ii],
             **kwargs,
         )
     plt.xlabel(mephistogram.axis_names)
     plt.xlim(mephistogram.bins[0], mephistogram.bins[-1])
     return f, axes
+
 
 def plot_mephistogram(mephistogram, **kwargs):
     """Plot 1D or 2D mephistograms.
@@ -512,26 +514,26 @@ def plot_mephistogram(mephistogram, **kwargs):
     2D: plt.pcolormesh
 
     """
-    if not "f" in kwargs or not "axes" in kwargs:
-        f, axes = plt.subplots(figsize=(5, 4))
+    if not "f" in kwargs or not "ax" in kwargs:
+        f, ax = plt.subplots(figsize=(5, 4))
     else:
         f = kwargs.pop("f")
-        axes = kwargs.pop("axes")
+        ax = kwargs.pop("ax")
     if mephistogram.ndim == 2:
-        plt.pcolormesh(*mephistogram.bins, mephistogram.histo.T, **kwargs)
-        plt.xlabel(mephistogram.axis_names[0])
-        plt.ylabel(mephistogram.axis_names[1])
-        plt.xlim(mephistogram.bins[0][0], mephistogram.bins[0][-1])
-        plt.ylim(mephistogram.bins[1][0], mephistogram.bins[1][-1])
+        ax.pcolormesh(*mephistogram.bins, mephistogram.histo.T, **kwargs)
+        ax.set_xlabel(mephistogram.axis_names[0])
+        ax.set_ylabel(mephistogram.axis_names[1])
+        ax.set_xlim(mephistogram.bins[0][0], mephistogram.bins[0][-1])
+        ax.set_ylim(mephistogram.bins[1][0], mephistogram.bins[1][-1])
     elif mephistogram.ndim == 1:
-        plt.bar(
+        ax.bar(
             mephistogram.bin_mids,
             height=mephistogram.histo,
             width=np.diff(mephistogram.bins),
             **kwargs,
         )
-        plt.xlabel(mephistogram.axis_names)
-        plt.xlim(mephistogram.bins[0], mephistogram.bins[-1])
+        ax.set_xlabel(mephistogram.axis_names)
+        ax.set_xlim(mephistogram.bins[0], mephistogram.bins[-1])
     else:
         print(f"No plotting possible with {mephistogram.ndim} dimensions.")
-    return f, axes
+    return f, ax
