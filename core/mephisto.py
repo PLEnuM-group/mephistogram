@@ -180,6 +180,7 @@ class Mephistogram:
         mode: '1D' or 'full'
         axis: optional, only needed if mode='1D'; 0 or 1
         """
+        self.histo = self.histo.astype("float")
         if mode == "1D":
             if axis == 0:
                 self.histo /= np.sum(self.histo, axis=axis)
@@ -520,11 +521,12 @@ def plot_mephistogram(mephistogram, **kwargs):
         f = kwargs.pop("f")
         ax = kwargs.pop("ax")
     if mephistogram.ndim == 2:
-        ax.pcolormesh(*mephistogram.bins, mephistogram.histo.T, **kwargs)
+        im = ax.pcolormesh(*mephistogram.bins, mephistogram.histo.T, **kwargs)
         ax.set_xlabel(mephistogram.axis_names[0])
         ax.set_ylabel(mephistogram.axis_names[1])
         ax.set_xlim(mephistogram.bins[0][0], mephistogram.bins[0][-1])
         ax.set_ylim(mephistogram.bins[1][0], mephistogram.bins[1][-1])
+        f.colorbar(im)
     elif mephistogram.ndim == 1:
         ax.bar(
             mephistogram.bin_mids,
