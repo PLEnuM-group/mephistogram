@@ -399,6 +399,8 @@ class Mephistogram:
         """Add two mephistograms or a number/matching array."""
         if (
             isinstance(this, int)
+            or isinstance(this, np.int64)
+            or isinstance(this, np.float64)
             or isinstance(this, float)
             or isinstance(this, np.ndarray)
         ):
@@ -415,6 +417,8 @@ class Mephistogram:
         """Subtract two mephistograms or a number/matching array. Note that the result might have negative numbers."""
         if (
             isinstance(this, int)
+            or isinstance(this, np.int64)
+            or isinstance(this, np.float64)
             or isinstance(this, float)
             or isinstance(this, np.ndarray)
         ):
@@ -431,6 +435,8 @@ class Mephistogram:
         """Multiply two mephistograms or a number/matching array."""
         if (
             isinstance(this, int)
+            or isinstance(this, np.int64)
+            or isinstance(this, np.float64)
             or isinstance(this, float)
             or isinstance(this, np.ndarray)
         ):
@@ -447,6 +453,8 @@ class Mephistogram:
         """Divide two mephistograms or a number/matching array."""
         if (
             isinstance(this, int)
+            or isinstance(this, np.int64)
+            or isinstance(this, np.float64)
             or isinstance(this, float)
             or isinstance(this, np.ndarray)
         ):
